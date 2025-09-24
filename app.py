@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 from io import BytesIO
+from openpyxl.utils import get_column_letter
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
 # Lista de campos
 campos = [
@@ -66,7 +68,40 @@ with st.form("form_postos"):
 
             # Criar arquivo Excel em memória
             output = BytesIO()
-            df.to_excel(output, index=True, engine='openpyxl')
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df.to_excel(writer, index=True, sheet_name='Postos')
+                ws = writer.sheets['Postos']
+
+                # Estilo básico
+                thin_border = Border(left=Side(style='thin'),
+                                     right=Side(style='thin'),
+                                     top=Side(style='thin'),
+                                     bottom=Side(style='thin'))
+
+                # Formatar cabeçalho
+                for cell in ws[1]:
+                    cell.font = Font(bold=True, color="FFFFFF")
+                    cell.fill = PatternFill("solid", fgColor="4F81BD")  # azul
+                    cell.alignment = Alignment(horizontal="center", vertical="center")
+                    cell.border = thin_border
+
+                # Ajustar largura das colunas
+                for col in ws.columns:
+                    max_length = 0
+                    column = col[0].column_letter
+                    for cell in col:
+                        if cell.value:
+                            max_length = max(max_length, len(str(cell.value)))
+                    ws.column_dimensions[column].width = max_length + 5
+
+                # Centralizar valores e aplicar cor alternada nas linhas
+                for i, row in enumerate(ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=2), start=2):
+                    fill_color = "DCE6F1" if i % 2 == 0 else "FFFFFF"
+                    for cell in row:
+                        cell.alignment = Alignment(horizontal="center", vertical="center")
+                        cell.fill = PatternFill("solid", fgColor=fill_color)
+                        cell.border = thin_border
+
             output.seek(0)
 
             # Botão de download
